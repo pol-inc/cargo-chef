@@ -60,6 +60,12 @@ pub struct Prepare {
     /// that are not necessary to successfully compile the specific binary.
     #[arg(long)]
     bin: Option<String>,
+
+    /// Specify a list of dependencies which should be ignored during the
+    /// prepare and cook phases. They will be temporarily removed from all
+    /// manifests in the project.
+    #[arg(long)]
+    ignore_deps: Option<Vec<String>>,
 }
 
 #[derive(Parser)]
@@ -298,9 +304,13 @@ fn _main() -> Result<(), anyhow::Error> {
                 })
                 .context("Failed to cook recipe.")?;
         }
-        Command::Prepare(Prepare { recipe_path, bin }) => {
-            let recipe =
-                Recipe::prepare(current_directory, bin).context("Failed to compute recipe")?;
+        Command::Prepare(Prepare {
+            recipe_path,
+            bin,
+            ignore_deps,
+        }) => {
+            let recipe = Recipe::prepare(current_directory, bin, ignore_deps)
+                .context("Failed to compute recipe")?;
             let serialized =
                 serde_json::to_string(&recipe).context("Failed to serialize recipe.")?;
             fs::write(recipe_path, serialized).context("Failed to save recipe to 'recipe.json'")?;

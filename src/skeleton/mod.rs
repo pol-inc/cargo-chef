@@ -46,6 +46,7 @@ impl Skeleton {
     pub fn derive<P: AsRef<Path>>(
         base_path: P,
         member: Option<String>,
+        ignored_dependencies: Option<Vec<String>>,
     ) -> Result<Self, anyhow::Error> {
         let metadata = extract_cargo_metadata(base_path.as_ref())?;
 
@@ -54,6 +55,20 @@ impl Skeleton {
         let mut manifests = read::manifests(&base_path, &metadata)?;
         if let Some(member) = member {
             ignore_all_members_except(&mut manifests, &metadata, member);
+        }
+
+        if let Some(ignored_deps) = ignored_dependencies {
+            for manifest in &mut manifests {
+                if let Some(deps) = manifest
+                    .contents
+                    .get_mut("dependencies")
+                    .and_then(|deps| deps.as_table_mut())
+                {
+                    for ignored_dep in &ignored_deps {
+                        deps.remove(ignored_dep.as_str());
+                    }
+                }
+            }
         }
 
         let mut lock_file = read::lockfile(&base_path)?;
